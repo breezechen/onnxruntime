@@ -124,6 +124,9 @@ ONNX_CPU_OPERATOR_KERNEL(
             BuildKernelDefConstraintsFromTypeList<EnabledPad13Types>()),
     Pad);
 
+
+using PadsVector = PadBase::PadsVector;
+
 // This is the general padding method to n-dimensionally do edge or reflection padding (based on the inputDelta values)
 template <typename T>
 static void PadAxis(T* output, T* input, ptrdiff_t input_delta, ptrdiff_t input_pitch,
@@ -224,8 +227,8 @@ static Status PadInputWithDimValueOfZero(OpKernelContext* ctx,
 // Flatten no padding inner most Axis, so one memcpy cover multiple Axis.
 // For example, for a shape of [1,224,224,3] with padding [0,3,3,0,0,3,3,0], can be flatten as
 // [1,224,224*3] with padding [0,3,3*3,0,3,3*3].
-static void FlattenInnerShape(const TensorShapeVector& input_dims, const TensorShapeVector& pads,
-                              const TensorShapeVector& slices, TensorShapeVector& reshaped_dims) {
+static void FlattenInnerShape(const TensorShapeVector& input_dims, const PadsVector& pads,
+                              const PadsVector& slices, TensorShapeVector& reshaped_dims) {
   size_t dims_count = input_dims.size();
   size_t inner_axis = dims_count - 1;
   size_t inner_size = 1;
@@ -251,8 +254,8 @@ static void FlattenInnerShape(const TensorShapeVector& input_dims, const TensorS
   reshaped_dims[inner_axis] = inner_size;
 }
 
-static void ReshapePads(const TensorShapeVector& src_pad, size_t src_dim_count, size_t new_dim_count,
-                        size_t inner_no_pad_size, TensorShapeVector& reshaped_pad) {
+static void ReshapePads(const PadsVector& src_pad, size_t src_dim_count, size_t new_dim_count,
+                        size_t inner_no_pad_size, PadsVector& reshaped_pad) {
   size_t inner_axis = new_dim_count - 1;
   std::copy(src_pad.begin(), src_pad.begin() + inner_axis, reshaped_pad.begin());
   std::copy(src_pad.begin() + src_dim_count, src_pad.begin() + src_dim_count + inner_axis,
@@ -265,8 +268,8 @@ static void ReshapePads(const TensorShapeVector& src_pad, size_t src_dim_count, 
 
 template <typename T>
 static Status PadImpl(OpKernelContext* ctx,
-                      const TensorShapeVector& pads,
-                      const TensorShapeVector& slices,
+                      const PadsVector& pads,
+                      const PadsVector& slices,
                       const Mode& mode,
                       T value) {
   if (!utils::HasTypeWithSameSize<AllEnabledPadTypes, T>()) {
@@ -292,7 +295,7 @@ static Status PadImpl(OpKernelContext* ctx,
   size_t inner_no_pad_size = output_dims[inner_axis] > 0
                                  ? reshaped_input_dims[inner_axis] / output_dims[inner_axis]
                                  : 0;
-  TensorShapeVector reshaped_pad(2 * new_dims_count), reshaped_slice(2 * new_dims_count);
+  PadsVector reshaped_pad(2 * new_dims_count), reshaped_slice(2 * new_dims_count);
   ReshapePads(pads, data_rank, new_dims_count, inner_no_pad_size, reshaped_pad);
   ReshapePads(slices, data_rank, new_dims_count, inner_no_pad_size, reshaped_slice);
 
@@ -473,10 +476,10 @@ Status Pad::Compute(OpKernelContext* ctx) const {
   const Tensor& input_tensor = *ctx->Input<Tensor>(0);
   MLDataType data_type = input_tensor.DataType();
   const auto element_size = data_type->Size();
-  TensorShapeVector pads;
-  TensorShapeVector slices;
-  const TensorShapeVector* pads_to_use;
-  const TensorShapeVector* slices_to_use;
+  PadsVector pads;
+  PadsVector slices;
+  const PadsVector* pads_to_use;
+  const PadsVector* slices_to_use;
   PadValue value;
 
   // kOnnxDomain Pad opset >= 11 (Or) kMsDomain opset == 1

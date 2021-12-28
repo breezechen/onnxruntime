@@ -549,21 +549,22 @@ FastReduceKind OptimizeShapeForFastReduce(gsl::span<const int64_t> input_shape,
   }
 
   InlinedHashSet<int64_t> axes;
+  const auto input_shape_size = gsl::narrow<int64_t>(input_shape.size());
   if (reduced_axes.size() == 0 && !noop_with_empty_axes) {
-    for (int64_t i = 0; i < (int64_t)input_shape.size(); ++i) {
+    for (int64_t i = 0; i < input_shape_size; ++i) {
       axes.insert(i);
     }
   } else {
-    for (auto it = reduced_axes.begin(); it != reduced_axes.end(); ++it) {
-      axes.insert(HandleNegativeAxis(*it, static_cast<int64_t>(input_shape.size())));
+    for (auto ax : reduced_axes) {
+      axes.insert(HandleNegativeAxis(ax, input_shape_size));
     }
   }
 
   fast_output_shape.clear();
-  fast_output_shape.reserve(input_shape.size());
+  fast_output_shape.reserve(input_shape_size);
   bool empty_reduce = false;
-  InlinedVectorShapeCap<bool> reduce(input_shape.size());
-  for (int64_t i = 0; i < (int64_t)input_shape.size(); ++i) {
+  InlinedVectorShapeCap<bool> reduce(input_shape_size);
+  for (int64_t i = 0; i < input_shape_size; ++i) {
     reduce[i] = axes.find(i) != axes.end();
     if (reduce[i]) {
       empty_reduce |= input_shape[i] == 0;
@@ -586,11 +587,11 @@ FastReduceKind OptimizeShapeForFastReduce(gsl::span<const int64_t> input_shape,
     }
     if (noop_with_empty_axes) {
       fast_axes.clear();
-      fast_output_shape.assign(input_shape.begin(), input_shape.end());
+      fast_output_shape.assign(input_shape.cbegin(), input_shape.cend());
       return FastReduceKind::kK;
     } else {
       if (keep_dims) {
-        fast_output_shape.resize(input_shape.size(), 1);
+        fast_output_shape.resize(input_shape_size, 1);
       } else {
         fast_output_shape.clear();
       }
@@ -602,13 +603,13 @@ FastReduceKind OptimizeShapeForFastReduce(gsl::span<const int64_t> input_shape,
 
   fast_shape.clear();
   fast_axes.clear();
-  fast_shape.reserve(input_shape.size());
+  fast_shape.reserve(input_shape_size);
   fast_axes.reserve(reduced_axes.size());
 
   fast_shape.push_back(input_shape[0]);
   if (reduce[0])
     fast_axes.push_back(0);
-  for (size_t i = 1; i < input_shape.size(); ++i) {
+  for (int64_t i = 1; i < input_shape_size; ++i) {
     if (reduce[i] == reduce[i - 1]) {
       fast_shape[fast_shape.size() - 1] *= input_shape[i];
     } else {

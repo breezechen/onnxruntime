@@ -43,13 +43,17 @@ Status Unique<float>::Compute(OpKernelContext* ctx) const {
     int64_t count_; // number of times encountered
   };
 
-  //XXX: Refactoring for less memory allocations. unordered_map
+  // XXX: Refactoring for less memory allocations. unordered_map
   // used originally for float uniqueness, is this correct?
-  using IndexingMap = std::pmr::unordered_map<float, ElementData>;
+  using IndexingMap = pmr::InlinedHashMap<float, ElementData>;
   const size_t map_buffer_size_in_bytes = sizeof(IndexingMap::value_type) * num_elements;
-  OrtDeclareAllignedStackBuffer(map_buffer, map_buffer_size_in_bytes, sizeof(int64_t));
+  AllocatorPtr allocator;
+  ORT_RETURN_IF_ERROR(ctx->GetTempSpaceAllocator(&allocator));
+
+  OrtDeclareAlignedStackOrAllocatedBuffer(allocator, map_buffer, map_buffer_size_in_bytes, sizeof(IndexingMap::value_type));
   SmallBufferResource mem_resource(map_buffer, map_buffer_size_in_bytes);
   IndexingMap mapped_indices(mem_resource.resource());
+  mapped_indices.reserve(num_elements);
 
   // processing
   for (int64_t i = 0; i < num_elements; ++i) {

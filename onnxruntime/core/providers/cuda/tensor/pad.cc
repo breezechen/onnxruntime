@@ -41,6 +41,8 @@ namespace cuda {
           .TypeConstraint("T", DataTypeImpl::GetTensorType<T>()), \
       Pad<T>);
 
+using PadsVector = PadBase::PadsVector;
+
 static bool IsNCHWInputWithPaddingAlongHAndW(size_t input_rank,
                                              const TArray<int64_t>& lower_pads,
                                              const TArray<int64_t>& upper_pads) {
@@ -82,13 +84,13 @@ Status Pad<T>::ComputeInternal(OpKernelContext* ctx) const {
   auto const& input_shape = input_tensor.Shape();
   int32_t dimension_count = static_cast<int32_t>(input_shape.NumDimensions());
 
-  const TensorShapeVector* p_pads = &pads_;
-  const TensorShapeVector* p_slices = &slices_;
+  const PadsVector* p_pads = &pads_;
+  const PadsVector* p_slices = &slices_;
   CudaT value = ToCudaType<T>::FromFloat(value_);
 
   // kOnnxDomain Pad opset >= 11 (Or) kMsDomain opset == 1
-  TensorShapeVector pads;
-  TensorShapeVector slices;
+  PadsVector pads;
+  PadsVector slices;
   if (is_dynamic_) {
     const Tensor& pads_tensor = *ctx->Input<Tensor>(1);
     const auto pads_tensor_dims = pads_tensor.Shape().GetDims();

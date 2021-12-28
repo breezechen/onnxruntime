@@ -498,9 +498,16 @@ class PlannerImpl {
 
   Status ComputeUseCounts() {
     // Note: for every ml-value, its definition must appear before all its uses in a topological sort of a valid model
-    std::unordered_set<std::reference_wrapper<const std::string>, std::hash<std::string>, std::equal_to<std::string>> graph_inputs;
-    for (auto& graph_input : graph_viewer_.GetInputsIncludingInitializers()) {
-      graph_inputs.insert(std::cref(graph_input->Name()));
+    using GraphInputsSet = pmr::InlinedHashSet<std::string_view>;
+
+    const auto& graph_inputs_nodes = graph_viewer_.GetInputsIncludingInitializers();
+    const size_t buffer_size = graph_inputs_nodes.size() * sizeof(GraphInputsSet::value_type);
+    OrtDeclareAllignedStackBuffer(inputs_buffer, buffer_size, sizeof(GraphInputsSet::value_type));
+    SmallBufferResource graph_inputs_resource(inputs_buffer, buffer_size);
+    GraphInputsSet graph_inputs(graph_inputs_resource.resource());
+    graph_inputs.reserve(graph_inputs_nodes.size());
+    for (auto& graph_input : graph_inputs_nodes) {
+      graph_inputs.insert(graph_input->Name());
     }
 
     for (auto graph_input : graph_viewer_.GetInputs()) {

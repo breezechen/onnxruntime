@@ -24,13 +24,21 @@ inline Status PrepareForComputeHelper(const gsl::span<const int64_t>& raw_starts
       axes.push_back(i);
     }
   } else {
+    axes.reserve(raw_axes.size());
     axes.assign(raw_axes.cbegin(), raw_axes.cend());
   }
 
   // Iterate through the provided axes and override the start/end ranges
-  InlinedHashSet<int64_t> unique_axes;
+  using AxesSet = pmr::InlinedHashSet<int64_t>;
+  const auto axes_count = axes.size();
+  const auto axes_buffer_size = sizeof(AxesSet::value_type) * axes_count;
+  OrtDeclareAllignedStackBuffer(axes_set_buffer, axes_buffer_size, sizeof(AxesSet::value_type));
+  SmallBufferResource axes_set_resource(axes_set_buffer, axes_buffer_size);
+  AxesSet unique_axes(axes_set_resource.resource());
+  unique_axes.reserve(axes_count);
+
   const auto dimension_count = compute_metadata.input_dimensions_.size();
-  for (size_t axis_index = 0, axes_count = axes.size(); axis_index < axes_count; ++axis_index) {
+  for (size_t axis_index = 0; axis_index < axes_count; ++axis_index) {
     const auto axis = HandleNegativeAxis(axes[axis_index], dimension_count);  // handle negative and enforce axis is valid
     if (axis >= static_cast<int64_t>(dimension_count) || axis < 0)
       return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT, "'axes' has an axis outside of the tensor dimension count");
@@ -83,9 +91,16 @@ inline Status PrepareForComputeHelper(const gsl::span<const int64_t>& raw_starts
   }
 
   // Iterate through the provided axes and override the start/end/steps ranges
-  InlinedHashSet<int64_t> unique_axes;
+  using AxesSet = pmr::InlinedHashSet<int64_t>;
+  const auto axes_count = axes.size();
+  const auto axes_buffer_size = sizeof(AxesSet::value_type) * axes_count;
+  OrtDeclareAllignedStackBuffer(axes_set_buffer, axes_buffer_size, sizeof(AxesSet::value_type));
+  SmallBufferResource axes_set_resource(axes_set_buffer, axes_buffer_size);
+  AxesSet unique_axes(axes_set_resource.resource());
+  unique_axes.reserve(axes_count);
+
   const auto dimension_count = compute_metadata.input_dimensions_.size();
-  for (size_t axis_index = 0, axes_count = axes.size(); axis_index < axes_count; ++axis_index) {
+  for (size_t axis_index = 0; axis_index < axes_count; ++axis_index) {
     const auto axis = axes[axis_index] < 0 ? axes[axis_index] + static_cast<int64_t>(dimension_count) : axes[axis_index];
     if (axis >= static_cast<int64_t>(dimension_count) || axis < 0)
       return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT, "'axes' has an axis outside of the tensor dimension count");
