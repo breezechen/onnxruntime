@@ -501,8 +501,8 @@ class PlannerImpl {
     using GraphInputsSet = pmr::InlinedHashSet<std::string_view>;
 
     const auto& graph_inputs_nodes = graph_viewer_.GetInputsIncludingInitializers();
-    const size_t buffer_size = graph_inputs_nodes.size() * sizeof(GraphInputsSet::value_type);
-    OrtDeclareAllignedStackBuffer(inputs_buffer, buffer_size, sizeof(GraphInputsSet::value_type));
+    const size_t buffer_size = EstimateInlinedHashMemory(sizeof(GraphInputsSet::value_type),  graph_inputs_nodes.size());
+    OrtDeclareAllignedStackOrAllocatedBuffer(inputs_buffer, buffer_size, sizeof(GraphInputsSet::value_type));
     SmallBufferResource graph_inputs_resource(inputs_buffer, buffer_size);
     GraphInputsSet graph_inputs(graph_inputs_resource.resource());
     graph_inputs.reserve(graph_inputs_nodes.size());

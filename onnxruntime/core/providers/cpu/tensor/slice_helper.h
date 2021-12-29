@@ -31,8 +31,8 @@ inline Status PrepareForComputeHelper(const gsl::span<const int64_t>& raw_starts
   // Iterate through the provided axes and override the start/end ranges
   using AxesSet = pmr::InlinedHashSet<int64_t>;
   const auto axes_count = axes.size();
-  const auto axes_buffer_size = sizeof(AxesSet::value_type) * axes_count;
-  OrtDeclareAllignedStackBuffer(axes_set_buffer, axes_buffer_size, sizeof(AxesSet::value_type));
+  const auto axes_buffer_size = EstimateInlinedHashMemory(sizeof(AxesSet::value_type), axes_count);
+  OrtDeclareAllignedStackOrAllocatedBuffer(axes_set_buffer, axes_buffer_size, sizeof(AxesSet::value_type));
   SmallBufferResource axes_set_resource(axes_set_buffer, axes_buffer_size);
   AxesSet unique_axes(axes_set_resource.resource());
   unique_axes.reserve(axes_count);
@@ -93,8 +93,8 @@ inline Status PrepareForComputeHelper(const gsl::span<const int64_t>& raw_starts
   // Iterate through the provided axes and override the start/end/steps ranges
   using AxesSet = pmr::InlinedHashSet<int64_t>;
   const auto axes_count = axes.size();
-  const auto axes_buffer_size = sizeof(AxesSet::value_type) * axes_count;
-  OrtDeclareAllignedStackBuffer(axes_set_buffer, axes_buffer_size, sizeof(AxesSet::value_type));
+  const auto axes_buffer_size = EstimateInlinedHashMemory(sizeof(AxesSet::value_type), axes_count);
+  OrtDeclareAllignedStackOrAllocatedBuffer(axes_set_buffer, axes_buffer_size, sizeof(AxesSet::value_type));
   SmallBufferResource axes_set_resource(axes_set_buffer, axes_buffer_size);
   AxesSet unique_axes(axes_set_resource.resource());
   unique_axes.reserve(axes_count);

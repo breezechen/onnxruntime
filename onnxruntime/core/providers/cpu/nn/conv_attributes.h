@@ -8,12 +8,16 @@
 #include "core/providers/common.h"
 #include "core/util/math.h"
 #endif
+
+#include "core/framework/inline_containers.h"
 #include "core/framework/op_node_proto_helper.h"
 
 namespace onnxruntime {
 
 // A helper struct holding attributes for Conv-family ops
 struct ConvAttributes {
+  using ConvPadVector = InlinedVector<int64_t, kTensorShapeSmallBufferElementsSize * 2>;
+
   explicit ConvAttributes(const OpKernelInfo& info) {
     std::string auto_pad_str;
     auto status = info.GetAttr<std::string>("auto_pad", &auto_pad_str);
@@ -28,7 +32,8 @@ struct ConvAttributes {
       strides.resize(kernel_shape_.size(), 1);
     }
 
-    status = info.GetAttrs("pads", pads);
+    gsl::span<const int64_t> pads_span;
+    status = info.GetAttrsAsSpan("pads", pads_span);
     if (!status.IsOK()) {
       // If pads are not explicitly provided, fill the container with all zeros
       // so that we can compute and fill in pad values downstream
@@ -37,6 +42,7 @@ struct ConvAttributes {
       // Pads are explicitly provided, make sure that auto_pad is NOTSET
       ORT_ENFORCE(auto_pad == AutoPadType::NOTSET,
                   "A Conv/ConvTranspose node has both 'auto_pad' and 'pads' attributes");
+      pads.assign(pads_span.cbegin(), pads_span.cend());
     }
 
     status = info.GetAttrs("dilations", dilations);
@@ -123,7 +129,7 @@ struct ConvAttributes {
                           const gsl::span<const int64_t>& kernel_shape,
                           const gsl::span<const int64_t>& strides_p,
                           const gsl::span<const int64_t>& dilations_p,
-                          TensorShapeVector& pads_p,
+                          ConvPadVector& pads_p,
                           TensorShapeVector& output_shape,
                           bool force_symmetric_auto_padding = false) const {
     size_t rank = input_shape.NumDimensions();
@@ -171,7 +177,7 @@ struct ConvAttributes {
                                           const gsl::span<const int64_t>& kernel_shape,
                                           const gsl::span<const int64_t>& strides_p,
                                           const gsl::span<const int64_t>& dilations_p,
-                                          TensorShapeVector& pads_p,
+                                          ConvPadVector& pads_p,
                                           TensorShapeVector& output_shape,
                                           TensorShapeVector& output_shape_with_revised_pads,
                                           bool& post_slicing_needed,
@@ -300,7 +306,7 @@ struct ConvAttributes {
   int64_t group;
   bool kernel_shape_specified;
   TensorShapeVector strides;
-  TensorShapeVector pads;
+  ConvPadVector pads;
   TensorShapeVector dilations;
   std::string activation;
   float alpha = 1.0f;

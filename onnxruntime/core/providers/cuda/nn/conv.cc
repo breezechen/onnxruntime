@@ -133,7 +133,7 @@ Status Conv<T>::UpdateState(OpKernelContext* context, bool bias_expected) const 
     TensorShapeVector kernel_shape;
     ORT_RETURN_IF_ERROR(conv_attrs_.ComputeKernelShape(W->Shape(), kernel_shape));
     auto rank = kernel_shape.size();
-    TensorShapeVector pads(conv_attrs_.pads);
+    ConvPadVector pads(conv_attrs_.pads);
     if (pads.empty()) {
       pads.resize(rank * 2, 0);
     }
@@ -362,18 +362,18 @@ CudnnConvolutionDescriptor::~CudnnConvolutionDescriptor() {
 
 Status CudnnConvolutionDescriptor::Set(
     size_t rank,
-    const TensorShapeVector& pads,
-    const TensorShapeVector& strides,
-    const TensorShapeVector& dilations,
+    const gsl::span<const int64_t>& pads,
+    const gsl::span<const int64_t>& strides,
+    const gsl::span<const int64_t>& dilations,
     int groups,
     cudnnConvolutionMode_t mode,
     cudnnDataType_t data_type) {
   if (!desc_)
     CUDNN_RETURN_IF_ERROR(cudnnCreateConvolutionDescriptor(&desc_));
 
-  std::vector<int> pad_dims(rank);
-  std::vector<int> stride_dims(rank);
-  std::vector<int> dilation_dims(rank);
+  InlinedVector<int, kTensorShapeSmallBufferElementsSize> pad_dims(rank);
+  InlinedVector<int, kTensorShapeSmallBufferElementsSize> stride_dims(rank);
+  InlinedVector<int, kTensorShapeSmallBufferElementsSize> dilation_dims(rank);
   for (size_t i = 0; i < rank; i++) {
     pad_dims[i] = gsl::narrow_cast<int>(pads[i]);
     stride_dims[i] = gsl::narrow_cast<int>(strides[i]);

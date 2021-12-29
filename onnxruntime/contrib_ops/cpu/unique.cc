@@ -46,11 +46,9 @@ Status Unique<float>::Compute(OpKernelContext* ctx) const {
   // XXX: Refactoring for less memory allocations. unordered_map
   // used originally for float uniqueness, is this correct?
   using IndexingMap = pmr::InlinedHashMap<float, ElementData>;
-  const size_t map_buffer_size_in_bytes = sizeof(IndexingMap::value_type) * num_elements;
-  AllocatorPtr allocator;
-  ORT_RETURN_IF_ERROR(ctx->GetTempSpaceAllocator(&allocator));
+  const size_t map_buffer_size_in_bytes = EstimateInlinedHashMemory(sizeof(IndexingMap::value_type), num_elements);
 
-  OrtDeclareAlignedStackOrAllocatedBuffer(allocator, map_buffer, map_buffer_size_in_bytes, sizeof(IndexingMap::value_type));
+  OrtDeclareAllignedStackOrAllocatedBuffer(map_buffer, map_buffer_size_in_bytes, sizeof(IndexingMap::value_type));
   SmallBufferResource mem_resource(map_buffer, map_buffer_size_in_bytes);
   IndexingMap mapped_indices(mem_resource.resource());
   mapped_indices.reserve(num_elements);

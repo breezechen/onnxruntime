@@ -13,6 +13,8 @@
 
 namespace onnxruntime {
 
+using ConvPadVector = ConvAttributes::ConvPadVector;
+
 template <typename ActType>
 class QLinearConv : public OpKernel {
  public:
@@ -449,7 +451,7 @@ Status QLinearConv<ActType>::Compute(OpKernelContext* context) const {
 
   const size_t kernel_rank = kernel_shape.size();
 
-  TensorShapeVector pads(conv_attrs_.pads);
+  ConvPadVector pads(conv_attrs_.pads);
   if (pads.empty()) {
     pads.resize(kernel_rank * 2, 0);
   }

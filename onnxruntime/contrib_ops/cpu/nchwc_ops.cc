@@ -5,11 +5,12 @@
 #include "core/mlas/inc/mlas.h"
 
 namespace onnxruntime {
+using ConvPadVector = ConvAttributes::ConvPadVector;
 namespace contrib {
 
 Status ReorderInput::Compute(OpKernelContext* context) const {
   const auto* X = context->Input<Tensor>(0);
-  const auto& X_shape = X->Shape().GetDims();
+  const auto X_shape = X->Shape().GetDims();
   const auto X_rank = X_shape.size();
   ORT_ENFORCE(X_rank == 4);
 
@@ -24,7 +25,7 @@ Status ReorderInput::Compute(OpKernelContext* context) const {
   const int64_t nchwc_block_size = static_cast<int64_t>(MlasNchwcGetBlockSize());
   const int64_t nchwc_channels = (channels + nchwc_block_size - 1) & ~(nchwc_block_size - 1);
 
-  std::vector<int64_t> Y_shape(X_rank);
+  TensorShapeVector Y_shape(X_rank);
   Y_shape[0] = batch_count;
   Y_shape[1] = nchwc_channels;
   int64_t spatial_size = 1;
@@ -127,7 +128,7 @@ Status ReorderOutput::Compute(OpKernelContext* context) const {
   ORT_ENFORCE(channels_ <= X_shape[1]);
 
   // Build the output shape in NCHW or NHWC order.
-  std::vector<int64_t> Y_shape(X_rank);
+  TensorShapeVector Y_shape(X_rank);
   Y_shape[0] = X_shape[0];
   Y_shape[channels_last_ ? X_rank - 1 : 1] = channels_;
   auto* Y_spatial_dims = Y_shape.data() + (channels_last_ ? 1 : 2);
@@ -168,7 +169,7 @@ Status NchwcConv::Compute(OpKernelContext* context) const {
     return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT, "Unsupported convolution size.");
   }
 
-  TensorShapeVector pads(conv_attrs_.pads);
+  ConvPadVector pads(conv_attrs_.pads);
   if (pads.empty()) {
     pads.resize(kernel_shape.size() * 2, 0);
   }
@@ -285,7 +286,7 @@ std::vector<float> NchwcUpsample::ComputeInterpolation(int64_t input_length,
 
 Status NchwcUpsample::Compute(OpKernelContext* context) const {
   const auto* X = context->Input<Tensor>(0);
-  const auto& X_shape = X->Shape().GetDims();
+  const auto X_shape = X->Shape().GetDims();
   ORT_ENFORCE(X_shape.size() == 4);
   ORT_ENFORCE((X_shape[1] % MlasNchwcGetBlockSize()) == 0);
 

@@ -38,7 +38,7 @@ struct ConvTransposeAttributes : public ConvAttributes {
     int64_t num_output_channels;
     TensorShape input_shape;
     TensorShapeVector kernel_shape;
-    TensorShapeVector pads;
+    ConvPadVector pads;
     TensorShapeVector dilations;
     TensorShapeVector strides;
   };
@@ -91,7 +91,7 @@ struct ConvTransposeAttributes : public ConvAttributes {
     if (local_output_padding.empty()) {
       local_output_padding.resize(kernel_shape.size(), 0);
     }
-    TensorShapeVector local_pads;
+    ConvPadVector local_pads;
     local_pads.reserve(2 * (input_shape.NumDimensions()));
     if (dynamic_padding) {
       for (int64_t i = 0; i < Pads->Shape().SizeFromDimension(0); ++i) {
@@ -137,7 +137,7 @@ struct ConvTransposeAttributes : public ConvAttributes {
   void ComputePadsAndOutputShape(TensorShape input_shape, int64_t output_channel,
                                  const TensorShapeVector& kernel_shape, const TensorShapeVector& p_strides,
                                  const TensorShapeVector& p_dilations, const TensorShapeVector& p_output_padding, const int64_t N,
-                                 TensorShapeVector* p_pads, TensorShapeVector* output_shape_p) const {
+                                 ConvPadVector* p_pads, TensorShapeVector* output_shape_p) const {
     size_t output_shape_size = output_shape.size();
     output_shape_p->insert(output_shape_p->begin(), {N, output_channel});
 

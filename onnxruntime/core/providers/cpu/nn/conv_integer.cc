@@ -11,6 +11,8 @@
 
 namespace onnxruntime {
 
+using ConvPadVector = ConvAttributes::ConvPadVector;
+
 class ConvInteger : public OpKernel {
  public:
   explicit ConvInteger(const OpKernelInfo& info) : OpKernel(info), conv_attrs_(info) {}
@@ -56,7 +58,7 @@ Status ConvInteger::Compute(OpKernelContext* context) const {
   TensorShapeVector kernel_shape;
   ORT_RETURN_IF_ERROR(conv_attrs_.ComputeKernelShape(W->Shape(), kernel_shape));
 
-  TensorShapeVector pads(conv_attrs_.pads);
+  ConvPadVector pads(conv_attrs_.pads);
   if (pads.empty()) {
     pads.resize(kernel_shape.size() * 2, 0);
   }

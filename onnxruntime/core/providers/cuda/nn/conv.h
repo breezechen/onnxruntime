@@ -10,6 +10,9 @@
 #include <list>
 
 namespace onnxruntime {
+
+using ConvPadVector = ConvAttributes::ConvPadVector;
+
 namespace cuda {
 
 class CudnnConvolutionDescriptor final {
@@ -18,9 +21,9 @@ class CudnnConvolutionDescriptor final {
   ~CudnnConvolutionDescriptor();
 
   Status Set(size_t rank,
-             const TensorShapeVector& pads,
-             const TensorShapeVector& strides,
-             const TensorShapeVector& dilations,
+             const gsl::span<const int64_t>& pads,
+             const gsl::span<const int64_t>& strides,
+             const gsl::span<const int64_t>& dilations,
              int groups,
              cudnnConvolutionMode_t mode,
              cudnnDataType_t data_type);
