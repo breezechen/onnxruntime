@@ -26,7 +26,7 @@ set(mlas_common_srcs
 
 if (onnxruntime_BUILD_WEBASSEMBLY)
   file(GLOB_RECURSE mlas_platform_srcs
-    "${ONNXRUNTIME_ROOT}/core/mlas/lib/wasm/*.cpp"
+    "${ONNXRUNTIME_ROOT}/core/mlas/lib/scalar/*.cpp"
   )
 elseif(MSVC)
   if(onnxruntime_target_platform STREQUAL "ARM64")
@@ -349,6 +349,10 @@ else()
       ${mlas_platform_srcs_avx2}
       ${mlas_platform_srcs_avx512f}
       ${mlas_platform_srcs_avx512core}
+    )
+  else()
+    file(GLOB_RECURSE mlas_platform_srcs
+      "${ONNXRUNTIME_ROOT}/core/mlas/lib/scalar/*.cpp"
     )
   endif()
 endif()
